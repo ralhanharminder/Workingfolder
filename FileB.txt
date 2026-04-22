@@ -10,4 +10,4 @@ Connect-AzAccount
 $access_token = (Get-AzAccessToken -ResourceUrl https://database.windows.net).Token
 
 # Now that we have the token, we use it to connect to the database 'mydb' on server 'myserver'
-Invoke-Sqlcmd -ServerInstance myserver.database.windows.net -Database mydb -AccessToken $access_token -query 'select * from Table1'
+Invoke-Sqlcmd -ServerInstance smi-app-mrg01.17cbd2d6b613.database.windows.net -Database VBS_MRG -AccessToken $access_token -query 'select @@version'
