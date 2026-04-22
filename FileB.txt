@@ -1,13 +1,8 @@
-Import-Module SQLServer
-Import-Module Az.Accounts -MinimumVersion 2.2.0
-
-# Note: the sample assumes that you or your DBA configured the server to accept connections using
-#       that Service Principal and has granted it access to the database (in this example at least
-#       the SELECT permission).
-
-### Obtain the Access Token: this will bring up the login dialog
-Connect-AzAccount
-$access_token = (Get-AzAccessToken -ResourceUrl https://database.windows.net).Token
-
-# Now that we have the token, we use it to connect to the database 'mydb' on server 'myserver'
-Invoke-Sqlcmd -ServerInstance -AccessToken $access_token -query 'select @@version'
+Invoke-Sqlcmd `
+  -ServerInstance "your-mi-name.public.xxxxx.database.windows.net,3342" `
+  -Database "master" `
+  -Username "your_sql_user" `
+  -Password "your_password" `
+  -Query "SELECT @@VERSION;" `
+  -Encrypt Mandatory `
+  -TrustServerCertificate
