@@ -1,86 +1,29 @@
-
-# =========================
-# Azure SQL MI - Run .sql files with Access Token and export to CSV
-# =========================
-
-# Required modules:
-# Install-Module Az.Accounts -Scope CurrentUser
-# Install-Module SqlServer -Scope CurrentUser
-
-Import-Module Az.Accounts -ErrorAction Stop
 Import-Module SqlServer -ErrorAction Stop
 
-# -------------------------
-# Variables - update these
-# -------------------------
-$ServerInstance = "your-mi-name.public.xxxxx.database.windows.net,3342"
+$ServerInstance = "your-mi-name.public.xxxxx.database.windows.net"
 $DatabaseName   = "YourDatabase"
+$Username       = "your_sql_user"
+$Password       = "your_password"
 $SqlFolder      = "C:\Automation\SQL"
 $OutputFolder   = "C:\Automation\Output"
 
-# -------------------------
-# Create output folder if missing
-# -------------------------
 if (-not (Test-Path $OutputFolder)) {
     New-Item -Path $OutputFolder -ItemType Directory -Force | Out-Null
 }
 
-# -------------------------
-# Connect to Azure
-# -------------------------
-Write-Host "Connecting to Azure..."
-Connect-AzAccount -ErrorAction Stop | Out-Null
+Get-ChildItem -Path $SqlFolder -Filter *.sql -File | ForEach-Object {
+    $queryText = Get-Content $_.FullName -Raw
+    $csvPath = Join-Path $OutputFolder "$($_.BaseName).csv"
 
-# -------------------------
-# Get access token for Azure SQL
-# -------------------------
-Write-Host "Getting Azure SQL access token..."
-$AccessToken = (Get-AzAccessToken -ResourceUrl "https://database.windows.net").Token
+    Invoke-Sqlcmd `
+        -ServerInstance $ServerInstance `
+        -Database $DatabaseName `
+        -Username $Username `
+        -Password $Password `
+        -Query $queryText `
+        -Encrypt Mandatory `
+        -TrustServerCertificate |
+    Export-Csv -Path $csvPath -NoTypeInformation -Encoding UTF8
 
-if (-not $AccessToken) {
-    throw "Failed to acquire access token."
+    Write-Host "Exported $csvPath"
 }
-
-# -------------------------
-# Read all .sql files
-# -------------------------
-$SqlFiles = Get-ChildItem -Path $SqlFolder -Filter *.sql -File
-
-if (-not $SqlFiles) {
-    throw "No .sql files found in folder: $SqlFolder"
-}
-
-# -------------------------
-# Execute each SQL file and export result to CSV
-# -------------------------
-foreach ($File in $SqlFiles) {
-    $QueryName = $File.BaseName
-    $CsvPath   = Join-Path $OutputFolder "$QueryName.csv"
-
-    try {
-        Write-Host "Running query file: $($File.Name)"
-
-        $QueryText = Get-Content -Path $File.FullName -Raw -ErrorAction Stop
-
-        $Result = Invoke-Sqlcmd `
-            -ServerInstance $ServerInstance `
-            -Database $DatabaseName `
-            -AccessToken $AccessToken `
-            -Query $QueryText `
-            -Encrypt Mandatory `
-            -ErrorAction Stop
-
-        if ($null -ne $Result) {
-            $Result | Export-Csv -Path $CsvPath -NoTypeInformation -Encoding UTF8
-            Write-Host "Exported: $CsvPath"
-        }
-        else {
-            Write-Warning "No rows returned for $($File.Name). Creating empty CSV was skipped."
-        }
-    }
-    catch {
-        Write-Error "Failed to process $($File.Name): $($_.Exception.Message)"
-    }
-}
-
-Write-Host "Done."
