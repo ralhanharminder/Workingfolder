@@ -1,56 +1,10 @@
-# ==========================================
-# Run .sql files against Azure SQL MI
-# using the currently logged-in Windows/Entra user
-# ==========================================
+Import-Module SqlServer
 
-Import-Module SqlServer -ErrorAction Stop
+$server = "your-mi-name.public.xxxxx.database.windows.net,3342"
+$database = "YourDatabase"
 
-# Update these values
-$ServerInstance = "your-mi-name.public.xxxxx.database.windows.net,3342"
-$DatabaseName   = "YourDatabase"
-$SqlFolder      = "C:\Automation\SQL"
-$OutputFolder   = "C:\Automation\Output"
-
-# Create output folder if it doesn't exist
-if (-not (Test-Path $OutputFolder)) {
-    New-Item -Path $OutputFolder -ItemType Directory -Force | Out-Null
-}
-
-# Get all .sql files
-$SqlFiles = Get-ChildItem -Path $SqlFolder -Filter *.sql -File
-
-if (-not $SqlFiles) {
-    throw "No .sql files found in $SqlFolder"
-}
-
-foreach ($File in $SqlFiles) {
-    $QueryName = $File.BaseName
-    $CsvPath   = Join-Path $OutputFolder "$QueryName.csv"
-
-    try {
-        Write-Host "Running $($File.Name)..."
-
-        $QueryText = Get-Content -Path $File.FullName -Raw -ErrorAction Stop
-
-        $Result = Invoke-Sqlcmd `
-            -ServerInstance $ServerInstance `
-            -Database $DatabaseName `
-            -Authentication "Active Directory Integrated" `
-            -Encrypt Mandatory `
-            -Query $QueryText `
-            -ErrorAction Stop
-
-        if ($null -ne $Result) {
-            $Result | Export-Csv -Path $CsvPath -NoTypeInformation -Encoding UTF8
-            Write-Host "Exported: $CsvPath"
-        }
-        else {
-            Write-Warning "No rows returned for $($File.Name)"
-        }
-    }
-    catch {
-        Write-Error "Failed for $($File.Name): $($_.Exception.Message)"
-    }
-}
-
-Write-Host "Done."
+Invoke-Sqlcmd `
+    -ServerInstance $server `
+    -Database $database `
+    -Authentication "Active Directory Integrated" `
+    -Query "SELECT SUSER_SNAME();"
