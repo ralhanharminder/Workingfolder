@@ -1,5 +1,5 @@
 Invoke-Sqlcmd `
-  -ServerInstance "your-mi-name.public.xxxxx.database.windows.net,3342" `
+  -ServerInstance "your-mi-name.public.xxxxx.database.windows.net" `
   -Database "master" `
   -Username "your_sql_user" `
   -Password "your_password" `
