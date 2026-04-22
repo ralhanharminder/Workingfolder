@@ -1,4 +1,39 @@
-This is file A
-This is the message and modify file a
+Import-Module dbatools
 
-This is and update from feature a branch
+# Connection details
+$instance = "your-mi-name.public.xxxxx.database.windows.net,3342"
+$database = "YourDatabase"
+$cred = Get-Credential
+
+# Paths
+$sqlPath = "C:\Automation\SQL"
+$outputPath = "C:\Automation\Output"
+
+# Ensure output folder exists
+New-Item -ItemType Directory -Path $outputPath -Force | Out-Null
+
+# Get all SQL files
+$sqlFiles = Get-ChildItem -Path $sqlPath -Filter *.sql
+
+foreach ($file in $sqlFiles) {
+
+    $queryName = $file.BaseName
+    $queryText = Get-Content $file.FullName -Raw
+    $csvFile   = Join-Path $outputPath "$queryName.csv"
+
+    try {
+        $result = Invoke-DbaQuery `
+            -SqlInstance $instance `
+            -Database $database `
+            -SqlCredential $cred `
+            -Query $queryText `
+            -EnableException
+
+        $result | Export-Csv -Path $csvFile -NoTypeInformation -Encoding UTF8
+
+        Write-Host "✅ Exported: $csvFile"
+    }
+    catch {
+        Write-Warning "❌ Failed: $queryName - $($_.Exception.Message)"
+    }
+}
