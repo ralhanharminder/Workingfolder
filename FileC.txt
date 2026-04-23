@@ -1,1 +1,1 @@
-FeatureA
+sqlcmd -S your-mi-name.public.xxxxx.database.windows.net -d YourDatabase -U your_user -P your_password -i query.sql -s "," -W -o output.csv
